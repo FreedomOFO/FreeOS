@@ -48,7 +48,7 @@ VRAM	EQU		0x0ff8		;Í¼Ïñ»º³åÇøµÄ¿ªÊ¼µØÖ·
 		call	waitkbdout
 
 ;±£»¤Ä£Ê½×ª±ä
-[INSTRSET"i486p"]			;ÉùÃ÷ÒªÊ¹ÓÃµ½µÄ486ÃüÁî
+[INSTRSET "i486p"]			;ÉùÃ÷ÒªÊ¹ÓÃµ½µÄ486ÃüÁî
 		LGDT	[GDTR0]		;ÔÝ¶¨GDTÉèÖÃ
 		mov		EAX,CR0
 		and		EAX,0x7fffffff	;Î»31Éè¶¨Îª0£¨Ñ°ºô½ûÖ¹£©
@@ -65,7 +65,7 @@ pipelineflush:
 ;bootpackµÄ´«Êä
 	
 		mov		ESI,bootpack	;´«ÊäÔª
-		mov		EDI,DSKCAC		;´«µÝµØÖ·
+		mov		EDI,BOTPAK		;´«µÝµØÖ·
 		mov		ECX,512*1024/4
 		call	memcpy
 ;Ë³±ã°Ñ´ÅÅÌÊý¾ÝÒ²´«Êäµ½±¾À´µÄÎ»ÖÃ
@@ -75,7 +75,7 @@ pipelineflush:
 		MOV		ECX,512/4
 		CALL	memcpy
 ;Ê£ÏÂÈ«²¿
-		MOV		ESI,DSKCAC0+512	; ´«ÊäÔªª
+		MOV		ESI,DSKCAC0+512	; ´«ÊäÔª?
 		MOV		EDI,DSKCAC+512	; ´«µÝµØÖ·
 		MOV		ECX,0
 		MOV		CL,BYTE [CYLS]

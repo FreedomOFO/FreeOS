@@ -1,5 +1,8 @@
+;FreeOS-IPL
+;TAB=4
 
-
+CYLS	equ	10
+		
 		org		0x7c00
 		jmp 	entry
 		
@@ -32,8 +35,51 @@ entry:
 		mov		SS,AX
 		mov		SP,0x7c00
 		mov		DS,AX
+
+;读取磁盘
+	
+		mov		AX,0x0820
 		mov		ES,AX
+		mov		CH,0		;柱面0
+		mov		DH,0		;磁头0
+		mov		CL,2 		;扇区2
+readloop:
+		mov		SI,0		;记录失败次数的寄存器
+retry:
+		mov		AH,0x02		;AH=0x02:读入磁盘
+		mov		AL,1 		;1个扇区
+		mov		BX,0		
+		mov		DL,0x00		;A驱动器
+		int		0x13		;调用磁盘BIOS
+		jnc		next		;没出错的话跳转到next
+		add		si,1		;往si加1
+		cmp		si,5 		;比较si和5
+		jae		error		;si>=5时，跳转到error
+		mov		AH,0x00
+		mov 	DL,0x00		;A驱动器
+		int		0x13		;重置驱动器
+		jmp		retry
+next:
+		mov		AX,ES		;把内存地址后移0x200
+		add		AX,0x0020
+		mov		ES,AX		;因为没有add ES,0x020指令，所以这里稍微绕个弯
+		add		CL,1 		;往CL里加1
+		cmp		CL,18 		;比较CL与18
+		jbe		readloop	;如果CL<=18 跳转至readloop
+		mov		CL,1
+		add		DH,1 
+		cmp		DH,2
+		jb		readloop
+		mov 	DH,0
+		add		CH,1 
+		cmp		CH,CYLS
+		jb		readloop	;如果CH<CYLS，则跳转到readloop  常数CYLS代表cylinders柱面
 		
+;读完启动区10柱面18扇区载入运行操作系统
+		mov		[0x0ff0],CH
+		jmp		0xc200
+
+error:
 		mov		SI,msg
 putloop:
 		mov		AL,[SI]
@@ -47,10 +93,9 @@ putloop:
 fin:
 		hlt					;让cpu停止，等待指令
 		jmp 	fin
-		
 msg:	
 		db		0x0a,0x0a	;换行两次
-		db		"hello,FREE "
+		db		"load error"
 		db		0x0a
 		db		0
 		

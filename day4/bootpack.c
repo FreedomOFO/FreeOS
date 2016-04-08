@@ -5,24 +5,49 @@ int io_load_eflags(void);
 void io_store_eflags(int eflags);
 
 //写在同文件，在定义前使用也要先声明
+void boxfill8(unsigned char *vram,int xsize,unsigned char c,int x0,int y0,int x1,int y1);
 void init_palette(void);
 void set_palette(int start,int end,unsigned char *rgb);
 
+#define BLACK 		0;
+#define	LIGHTRED	1;
+#define LIGHTGREEN	2;
+#define LIGHTYELLOW	3;
+#define	LIGHTBLUE	4;
+#define LIGHTPUPPLE 5;
+#define	SLIGHTBLUE	6;
+#define	WHITE		7;
+#define	LIGHTGREY	8;
+#define	DARKRED		9;
+#define	DARKGREEN	10;
+#define	DARKYELLOW	11;
+#define	DARKGGREEN	12;
+#define	DARKPUPPLE	13;
+#define	SDARKBLUE	14;
+#define	DARKGREY	15;
+
 void HariMain(void)
 {
-	int i;
 	char *p;
 	
 	init_palette();				//设定调色板
 	
 	p=(char *)0xa0000;			//指定地址
 	
-	for(i=0;i<=0xaffff;i++){
-		p[i]=i & 0x0f;			//mov byte[i],i&0x0f		
-	}
+	boxfill8(p,320,BLACK,20,20,120,120);
+	boxfill8(p,320,LIGHTGREEN,20,20,120,120);
+	boxfill8(p,320,LIGHTBLUE,20,20,120,120);
 	for(;;){
 		io_hlt();
 		}
+}
+void boxfill8(unsigned char *vram,int xsize,unsigned char c,int x0,int y0,int x1,int y1){
+	int x,y;
+	for(y=y0;y<=y1;y++){
+		for(x=x0;x<=x1;x++)
+			vram[y*xsize+x]=c;
+	}
+	return;
 }
 void init_palette(void){
 	static unsigned char table_rgb[16*3]={

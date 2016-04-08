@@ -6,23 +6,23 @@
 ;以下记述用于标准FAT12格式软盘
 
 		db		0x90
-		db		"HelloIPL"	;启动区名称（8字节）
-		dw 		512			;扇区（sector）大小（必须为512字节）
-		db 		1 			;簇（cluster）的大小（必须为1个扇区）
-		dw 		1			;FAT的起始位置（一般从第一个扇区开始）
-		db 		2			;FAT的个数（必须为2）
-		dw 		224			;根目录的大小（一般设置为224项）
-		dw 		2880		;该磁盘的大小（必须为2880扇区）
-		db		0xf0		;磁盘种类（必须为0xf0）
-		dw		9			;FAT的长度（必须为9扇区）
-		dw		18			;1个磁道
-		dw		2			;磁头数（必须是2）
-		dd		0			;不使用分区，必须是0
-		dd		2880		;重写一次磁盘大小
-		db		0,0,0x29	;意义不明，固定
-		dd		0xffffffff	;可能为卷标号码		
-		DB		"FREE-OS    "	;磁盘名称（11字节）	
-		DB		"FAT12   "		;磁盘格式名称（8字节）	
+		db		"helloipl"
+		dw		512
+		DB		1				
+		DW		1				
+		DB		2				
+		DW		224				
+		DW		2880		
+		DB		0xf0			
+		DW		9				
+		DW		18				
+		DW		2				
+		DD		0				
+		DD		2880			
+		DB		0,0,0x29		
+		DD		0xffffffff		
+		DB		"HELLO-OS   "	
+		DB		"FAT12   "		
 		RESB	18				
 		
 ;程序核心

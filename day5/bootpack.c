@@ -13,6 +13,10 @@ void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, i
 void init_screen(char *vram, int x, int y);
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+void init_mouse_cursor8(char *mouse,char bc);
+void putblock8_8(char *vram,int vxsize,int pxsize,int pysize,int px0,int py0,char *buf,int bxsize);
+void init_gdtidt(void);
+
 
 #define COL8_000000		0
 #define COL8_FF0000		1
@@ -30,37 +34,62 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
 #define COL8_840084		13
 #define COL8_008484		14
 #define COL8_848484		15
-struct BOOTINFO{
-		char cyls,leds,vmode,reserve;
-		short scrnx,scrny;
-		char *vram;
+struct BOOTINFO {
+	char cyls, leds, vmode, reserve;
+	short scrnx, scrny;
+	char *vram;
 };
 
+struct SEGMENT_DESCRIPTOR {
+	short limit_low, base_low;
+	char base_mid, access_right;
+	char limit_high, base_high;
+};
+
+struct GATE_DESCRIPTOR {
+	short offset_low, selector;
+	char dw_count, access_right;
+	short offset_high;
+};
+void init_gdtidt(void);
+void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
+void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
+void load_gdtr(int limit, int addr);
+void load_idtr(int limit, int addr);
+
 void HariMain(void){
-		struct BOOTINFO (*binfo)=(struct BOOTINFO  *)0x0ff0;
-		char   s[40];
+		struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
+		char   s[40],mcursor[256];
+		int mx, my;
+		
 		
 		init_palette();
 		init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
+		mx = (binfo->scrnx - 16) / 2; //计算画面中央
+		my = (binfo->scrny - 28 - 16) / 2;
+		init_mouse_cursor8(mcursor,COL8_008484);
+		putblock8_8(binfo->vram,binfo->scrnx,16,16,mx,my,mcursor,16);
+		
+		
 		putfonts8_asc(binfo->vram, binfo->scrnx,  8, 8, COL8_FFFFFF, "TEST MaiMeng");
 		putfonts8_asc(binfo->vram, binfo->scrnx, 31, 31, COL8_FF00FF, "I'm the ugliest Opera System.T_T");
 		putfonts8_asc(binfo->vram, binfo->scrnx, 35, 51, COL8_840084, "I'm the most useless System.Q_Q");
 		putfonts8_asc(binfo->vram, binfo->scrnx, 70, 70, COL8_C6C6C6, "Don't give me up.@_@");
 		putfonts8_asc(binfo->vram, binfo->scrnx, 71, 71, COL8_848484, "Don't give me up.@_@");
 		putfonts8_asc(binfo->vram, binfo->scrnx, 43, 91, COL8_00FFFF, "I'll grow useful soon!*(^_^)*");
-		
-		putfonts8_asc(binfo->vram, binfo->scrnx, 80, 180, COL8_FF0000, "FreeOS @copyright 141");
-		putfonts8_asc(binfo->vram, binfo->scrnx, 16, 181, COL8_FFFFFF, "Menu");
-		putfonts8_asc(binfo->vram, binfo->scrnx, 15, 180, COL8_840000, "Menu");
-		
-		boxfill8(binfo->vram,	binfo->scrnx,	COL8_00FFFF,	140,     111,  180,151);
+		//丑人
+		boxfill8(binfo->vram,	binfo->scrnx,	COL8_FFFF00,	140,     111,  180,151);
 		boxfill8(binfo->vram,	binfo->scrnx,	COL8_000000,	145,     121,  155,123);
 		boxfill8(binfo->vram,	binfo->scrnx,	COL8_000000,	165,     121,  175,123);
 		boxfill8(binfo->vram,	binfo->scrnx,	COL8_840084,	158,     129,  162,133);
 		boxfill8(binfo->vram,	binfo->scrnx,	COL8_840000,	150,     141,  170,143);
 		
-		sprintf(s, "scrnx = %d", binfo->scrnx);
-		//putfonts8_asc(binfo->vram, binfo->scrnx, 16, 64, COL8_FFFFFF, s);
+		putfonts8_asc(binfo->vram, binfo->scrnx, 80, 180, COL8_FF0000, "FreeOS @copyright 141");
+		putfonts8_asc(binfo->vram, binfo->scrnx, 16, 181, COL8_FFFFFF, "Menu");
+		putfonts8_asc(binfo->vram, binfo->scrnx, 15, 180, COL8_840000, "Menu");
+		
+		sprintf(s, "(%d, %d)", mx, my);
+		putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 				
 		for(;;){
 			io_hlt();
@@ -163,3 +192,93 @@ void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s
 	}
 	return;
 }
+
+void init_mouse_cursor8(char *mouse,char bc)//准备鼠标指针
+{
+	static char cursor[16][16] = {
+		"**************..",
+		"*OOOOOOOOOOO*...",
+		"*OOOOOOOOOO*....",
+		"*OOOOOOOOO*.....",
+		"*OOOOOOOO*......",
+		"*OOOOOOO*.......",
+		"*OOOOOOO*.......",
+		"*OOOOOOOO*......",
+		"*OOOO*OOOO*.....",
+		"*OOO*.*OOOO*....",
+		"*OO*...*OOOO*...",
+		"*O*.....*OOOO*..",
+		"**.......*OOOO*.",
+		"*.........*OOOO*",
+		"...........*OOO*",
+		"............****"
+	};
+	int x, y;
+
+	for (y = 0; y < 16; y++) {
+		for (x = 0; x < 16; x++) {
+			if (cursor[y][x] == '*') {
+				mouse[y * 16 + x] = COL8_000000;
+			}
+			if (cursor[y][x] == 'O') {
+				mouse[y * 16 + x] = COL8_FFFFFF;
+			}
+			if (cursor[y][x] == '.') {
+				mouse[y * 16 + x] = bc;
+			}
+		}
+	}
+	return;
+}
+
+void putblock8_8(char *vram, int vxsize, int pxsize,
+	int pysize, int px0, int py0, char *buf, int bxsize)
+{
+	int x, y;
+	for (y = 0; y < pysize; y++) {
+		for (x = 0; x < pxsize; x++) {
+			vram[(py0 + y) * vxsize + (px0 + x)] = buf[y * bxsize + x];
+		}
+	}
+	return;
+}
+void init_gdtidt(void){
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) 0x00270000;
+	struct GATE_DESCRIPTOR    *idt = (struct GATE_DESCRIPTOR    *) 0x0026f800;
+	int i;
+	//GDT的初始化
+	for(i=0;i<8192;i++){
+		set_segmdesc(gdt+i,0,0,0);
+	}
+	set_segmdesc(gdt+1,0xffffffff,0x00000000,0x4092);
+	set_segmdesc(gdt+2,0x0007ffff,0x00280000,0x409a);
+	load_gdtr(0xffff,0x00270000);
+	//IDT的初始化
+	for(i=0;i<256;i++){
+		set_gatedesc(idt+i,0,0,0);
+	}
+	load_idtr(0x7ff,0x0026f800);
+	return;
+}
+
+void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar){
+	if(limit > 0xffffff){
+		ar |= 0x8000;//G_bit=10
+		limit/=0x1000;
+	}
+	sd->limit_low =limit & 0xffff;
+	sd->base_low =base &0xffff;
+	sd->base_mid =(base>>16)&0xff;
+	sd->access_right=ar&0xff;
+	sd->limit_high=((limit>>16)&0x0f)|((ar>>8)&0xf0);
+	sd->base_high =(base>>24)&0xff;
+	return;
+};
+void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar){
+	gd->offset_low=offset&0xffff;
+	gd->selector =selector;
+	gd->dw_count =(ar >> 8)&0xff;
+	gd->access_right=ar&0xff;
+	gd->offset_high=(offset>>16)&0xffff;
+	return;
+};
